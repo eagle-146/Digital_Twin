@@ -34,21 +34,27 @@ for i = 1:numel(blks)
     bt = get_param(blks{i},'BlockType');
     nm = lower(get_param(blks{i},'Name'));
     if any(strcmp(bt, srcTypes)) && any(cellfun(@(k)contains(nm,k), kw))
-        val = ''; try, val = get_param(blks{i},'Value'); catch, end
-        fprintf('   • %s  [%s]  Value=%s\n', blks{i}, bt, val);
+        val = local_source_value_str(blks{i}, bt);
+        fprintf('   • %s  [%s]  %s\n', blks{i}, bt, val);
     end
 end
 
 % ── 3) 로깅 표시된 신호 ──
 fprintf('\n[3] 로깅(signal logging) 표시된 신호\n');
+% ⚠ DataLogging* 계열 파라미터는 get_param()으로 읽으면 "그런 파라미터
+%   없음" 에러가 나는 버전 제약이 있다(기본 Simulink에서도 재현됨).
+%   generic get()/set()은 정상 동작하므로 이 계열은 반드시 get()으로 읽는다.
 lines = find_system(modelName,'FindAll','on','LookUnderMasks','all','type','line');
 nlog = 0;
 for i = 1:numel(lines)
-    dl = ''; try, dl = get_param(lines(i),'DataLogging'); catch, end
-    if strcmpi(dl,'on') || isequal(dl,1) || isequal(dl,true)
+    dl = false; try, dl = get(lines(i),'DataLogging'); catch, end
+    if isequal(dl,true) || isequal(dl,1) || strcmpi(dl,'on')
         nm = ''; try, nm = get_param(lines(i),'Name'); catch, end
         if isempty(nm)
-            try, nm = get_param(lines(i),'DataLoggingNameMode'); catch, end
+            try, nm = get(lines(i),'DataLoggingName'); catch, end
+        end
+        if isempty(nm)
+            try, nm = get(lines(i),'UserSpecifiedLogName'); catch, end
         end
         src = ''; try, sp = get_param(lines(i),'SrcBlockHandle'); src = get_param(sp,'Name'); catch, end
         fprintf('   • 신호명: "%s"   (출처 블록: %s)\n', nm, src);
@@ -64,4 +70,28 @@ fprintf('   StopTime = %s,  Solver = %s,  Type = %s\n', ...
     get_param(modelName,'SolverType'));
 
 fprintf('\n======== 분석 끝 — 위 [1]~[3] 출력을 공유해 주세요 ========\n\n');
+end
+
+% ── 소스 블록 타입별 실제 값 파라미터 조회 ──
+%  'Value'는 Constant 블록에만 있다. Step/Ramp 등은 이름이 달라 그냥
+%  get_param(blk,'Value')를 쓰면 항상 실패(try/catch로 조용히 빈칸) —
+%  실제로 이 프로젝트에서 속도지령이 Step 블록이었는데 Value만 찾다가
+%  못 찾은 적이 있어 블록타입별로 맞는 파라미터를 조회하도록 한다.
+function s = local_source_value_str(blk, blockType)
+try
+    switch blockType
+        case 'Constant'
+            s = sprintf('Value=%s', get_param(blk,'Value'));
+        case 'Step'
+            s = sprintf('Time=%s Before=%s After=%s', ...
+                get_param(blk,'Time'), get_param(blk,'Before'), get_param(blk,'After'));
+        case 'Ramp'
+            s = sprintf('Slope=%s Start=%s InitialOutput=%s', ...
+                get_param(blk,'slope'), get_param(blk,'start'), get_param(blk,'InitialOutput'));
+        otherwise
+            s = '(Inport/SignalBuilder 등 — 값은 워크스페이스/외부 입력에 의해 결정)';
+    end
+catch e
+    s = sprintf('(값 조회 실패: %s)', e.message);
+end
 end

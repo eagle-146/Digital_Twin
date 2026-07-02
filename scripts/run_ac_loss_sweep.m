@@ -85,10 +85,15 @@ end
 
 results = struct2table(rows);
 
-% 저장
-if ~exist('results','dir'), mkdir('results'); end
-save(fullfile('results','ac_loss_sweep.mat'),'results');
-writetable(results, fullfile('results','ac_loss_sweep.csv'));
+% 저장 — 현재 작업폴더가 아니라 이 스크립트(scripts/) 기준 프로젝트 루트의
+% results/ 에 고정한다. MATLAB 현재 폴더는 세션마다 바뀌기 쉬워서(예:
+% models/ 안에서 실행), pwd 기준으로 저장하면 결과가 프로젝트 밖 엉뚱한
+% 곳에 흩어질 수 있다.
+proj_root = fileparts(fileparts(mfilename('fullpath')));
+results_dir = fullfile(proj_root, 'results');
+if ~exist(results_dir,'dir'), mkdir(results_dir); end
+save(fullfile(results_dir,'ac_loss_sweep.mat'),'results');
+writetable(results, fullfile(results_dir,'ac_loss_sweep.csv'));
 
 % 플롯
 figure('Name','AC 동손 vs 정속');

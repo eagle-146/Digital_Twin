@@ -48,7 +48,9 @@ end
 
 % ── [C] DC 전압원 / 배터리 ──
 fprintf('\n[C] DC 전압원 / 배터리 블록\n');
-blks = find_system(model,'LookUnderMasks','all','type','block');
+% FollowLinks 없이는 라이브러리 링크 서브시스템 내부(Simscape 컴포넌트 등)를
+% 못 들어갈 수 있어 inspect_model.m과 동일하게 켠다.
+blks = find_system(model,'LookUnderMasks','all','FollowLinks','on','type','block');
 for i=1:numel(blks)
     mt=''; try, mt=get_param(blks{i},'MaskType'); catch, end
     if contains(mt,'DC Voltage','IgnoreCase',true) || contains(mt,'Battery','IgnoreCase',true)

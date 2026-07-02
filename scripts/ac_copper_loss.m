@@ -30,7 +30,15 @@ opt = ip.Results;
 % ── 1상 대표 처리: 여러 상이면 상별 계산 후 합 ──
 i_phase = squeeze(i_phase);
 if ~isvector(i_phase)
-    % [N x m] 다상: 각 상 개별 처리 후 합, nPhase는 1로 (이미 실제 상수만큼 열이 있음)
+    % [N x m] 다상: 각 상 개별 처리 후 합, nPhase는 강제로 1 (열 개수가 곧 실제
+    % 상수이므로). 호출자가 nPhase를 다른 값으로 넘겼다면 의도와 다르게
+    % 무시되는 것이니 알려준다.
+    if opt.nPhase ~= 1
+        warning('ac_copper_loss:nPhaseIgnored', ...
+            ['다상 입력([N x %d])에서는 nPhase=%.3g 옵션이 무시되고 열 개수만큼의 ' ...
+             '실제 상수로 처리됩니다. 1상 벡터를 넣고 nPhase로 배수를 지정하세요.'], ...
+            size(i_phase,2), opt.nPhase);
+    end
     P_ac = 0; harmAll = [];
     acc = struct('P_dc_W',0,'P_fund_W',0,'P_harm_W',0);
     for c = 1:size(i_phase,2)
