@@ -53,8 +53,24 @@ if ~isvector(i_phase)
 end
 
 i_phase = i_phase(:);
+t = t(:);
+
+% ── 균일 시간격자로 재보간 (가변스텝 솔버 대응) ──
+%  Simulink 가변스텝 솔버(VariableStepAuto 등)로 로깅된 신호는 샘플 간격이
+%  불균일하다. FFT는 균일 샘플링을 전제하므로, 재보간 없이 그대로 fft()에
+%  넣으면 스펙트럼이 왜곡되어(특히 고조파 쪽으로 에너지가 잘못 몰려) 완전히
+%  틀린 결과가 나온다. 요청한 fMax(기본 Nyquist)를 넉넉히 만족하도록
+%  균일 dt를 정하고 선형보간한다.
+dt_orig = median(diff(t));
+if isempty(opt.fMax)
+    dt = dt_orig;
+else
+    dt = min(dt_orig, 1/(4*opt.fMax));
+end
+t_u = (t(1):dt:t(end))';
+i_phase = interp1(t, i_phase, t_u, 'linear');
+t = t_u;
 N  = numel(i_phase);
-dt = mean(diff(t));
 Fs = 1/dt;
 
 % ── FFT → 단측 진폭 스펙트럼 ──
