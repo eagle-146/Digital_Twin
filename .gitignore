@@ -1,0 +1,47 @@
+# ── MATLAB / Simulink ─────────────────────────────
+*.asv                # autosave
+*.m~
+slprj/               # Simulink build cache
+sccprj/
+*.slxc               # Simulink cache
+*.autosave
+*.mex*               # compiled MEX
+codegen/             # generated code
+*.mldatx             # test manager results
+octave-workspace
+
+# Simulink model backup / lock files
+*.slx.r*
+*.slx.autosave
+*.slx.original
+~$*.slx
+
+# ── ANSYS (Maxwell / Motor-CAD / Twin Builder) ────
+# Large binaries & regenerable results — keep OUT of git (use LFS if you must version)
+*.aedtresults/
+*.aedt.lock
+*.lock
+*.batchinfo/
+*.pmacro
+results_ansys/
+*.mesh
+*.res
+*.rst
+*.a3dcomp
+
+# ── Simulation outputs (regenerable) ──────────────
+results/
+*.mat.result
+*.sdf                # Simulation Data Inspector runs
+logs/
+*.log
+
+# ── OS / editor cruft ─────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.tmp
+.vscode/
+
+# ── MATLAB Project internals (keep .prj, ignore transient) ──
+resources/project/**/Root.type.Files/

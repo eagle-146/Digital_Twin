@@ -1,0 +1,12 @@
+# Treat Simulink/MATLAB binaries as binary (no line-ending mangling, no bad merges)
+*.slx   binary
+*.mdl   binary
+*.mat   binary
+*.mlx   binary
+*.slxc  binary
+*.mexw64 binary
+
+# ── Git LFS candidates (uncomment after `git lfs install`) ──
+# Large data/maps or FEA exports you MUST version:
+# *.mat   filter=lfs diff=lfs merge=lfs -text
+# *.aedt  filter=lfs diff=lfs merge=lfs -text
