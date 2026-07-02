@@ -98,7 +98,17 @@ if isa(sig,'timeseries')
 elseif isstruct(sig) && isfield(sig,'Data')
     v = squeeze(sig.Data); t = sig.Time(:);
 else
-    v = squeeze(sig); t = (0:size(v,1)-1).';
+    % 시간정보가 없는 원시 배열. 벡터라면 먼저 열벡터로 고정해두지 않으면
+    % (예: 1xN 행벡터) size(v,1)이 1이 되어 아래에서 파생하는 t도 길이 1짜리로
+    % 잘못 만들어진다.
+    v = squeeze(sig);
+    if isvector(v), v = v(:); end
+    t = (0:size(v,1)-1).';
 end
-if size(v,1) < size(v,2), v = v.'; end   % [N x m] 정렬
+% [N x m] 정렬: 시간벡터 길이(t)를 기준 삼아 방향을 정한다. 단순히 "행이 더
+% 많은 쪽이 시간축"으로 추정하면 샘플 수가 3개 미만(m=3상)일 때 잘못
+% 뒤집힐 수 있다.
+if size(v,1) ~= numel(t) && size(v,2) == numel(t)
+    v = v.';
+end
 end

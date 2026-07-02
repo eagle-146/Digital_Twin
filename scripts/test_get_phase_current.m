@@ -12,6 +12,7 @@ nPass = 0; nTotal = 0;
 [nTotal, nPass] = check(nTotal, nPass, 'individual ia/ib/ic signals', @() sub_individual());
 [nTotal, nPass] = check(nTotal, nPass, 'no matching signal -> clear error', @() sub_notfound());
 [nTotal, nPass] = check(nTotal, nPass, 'custom signal name override', @() sub_customname());
+[nTotal, nPass] = check(nTotal, nPass, 'short row-vector raw signal not mis-oriented', @() sub_shortrowvector());
 
 fprintf('\n=== test_get_phase_current: %d/%d 통과 ===\n', nPass, nTotal);
 if nPass < nTotal
@@ -76,6 +77,22 @@ end
         ds = ds.addElement(timeseries(data, t), 'my_weird_current_name');
         [iabc, ~] = get_phase_current(ds, {'my_weird_current_name'});
         assert(isequal(size(iabc), [numel(t) 3]), 'shape mismatch with custom name');
+    end
+
+    function sub_shortrowvector()
+        % Dataset 원소가 timeseries/struct로 안 감싸진 순수 배열(1x3 행벡터,
+        % 3샘플뿐)인 경우. 예전 코드는 이 경우 시간벡터를 길이 1짜리로 잘못
+        % 유도해 [N x 3] 결합 시 길이가 안 맞았다.
+        ds = Simulink.SimulationData.Dataset;
+        ds = ds.addElement([1 2 3], 'ia');
+        ds = ds.addElement([4 5 6], 'ib');
+        ds = ds.addElement([7 8 9], 'ic');
+        [iabc, t] = get_phase_current(ds);
+        assert(isequal(size(iabc), [3 3]), sprintf('shape=%s expected [3 3]', mat2str(size(iabc))));
+        assert(numel(t) == 3, sprintf('t 길이=%d expected 3', numel(t)));
+        assert(isequal(iabc(:,1), [1;2;3]), 'phase A 값 불일치');
+        assert(isequal(iabc(:,2), [4;5;6]), 'phase B 값 불일치');
+        assert(isequal(iabc(:,3), [7;8;9]), 'phase C 값 불일치');
     end
 
 end

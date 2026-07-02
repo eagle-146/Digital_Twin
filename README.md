@@ -36,8 +36,17 @@ results/      시뮬 결과 (git 제외 — 재생성 가능)
 docs/         문서·노트
 ```
 
+## 검증 / 테스트
+- `scripts/test_*.m` — 알려진(이론값 계산 가능한) 합성 신호로 핵심 로직(FFT/AC동손, 신호탐색,
+  운전점 계산, 모델 인스펙터)을 검증하는 회귀테스트. `scripts/run_all_tests.m` 하나로 전부 실행.
+- 이 테스트들은 **Simscape 등 추가 툴박스나 .slx 모델 없이, 기본 MATLAB + Simulink만으로 동작**한다
+  (Simulink는 `Simulink.SimulationData.Dataset`/기본 소스 블록 검증용으로만 씀).
+  실제 `.slx` 하네스(`run_ac_loss_sweep.m`, `cfg_*.m`)를 건드릴 때도, 먼저 `run_all_tests`와
+  `demo_ac_loss`로 코어 로직이 멀쩡한지 빠르게 확인하고 넘어가면 디버깅 범위를 좁힐 수 있다.
+
 ## 이식성 (다른 PC에서 구동)
 - **MATLAB Project(.prj)** 로 경로/의존성 관리 → 폴더째 옮겨도 실행 (권장)
 - `.slx`는 만든 MATLAB 버전 **이상**에서만 열림
-- 필요 툴박스: Simscape, Simscape Electrical, Powertrain Blockset, Motor Control Blockset
+- `.slx` 하네스 실행에 필요한 툴박스: Simscape, Simscape Electrical, Powertrain Blockset,
+  Motor Control Blockset (단, 위 테스트 스위트는 이 툴박스들 없이도 동작함)
 - 대용량 FEA 산출물은 git 제외(.gitignore) 또는 Git LFS 사용
