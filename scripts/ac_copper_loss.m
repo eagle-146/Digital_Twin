@@ -111,8 +111,10 @@ harm = table(fs, Irms, Rac, opt.nPhase*Pk, 'VariableNames', ...
 harm = sortrows(harm,'f_Hz');
 
 Rdc = RacFun(0, T_cu); if Rdc==0, Rdc = RacFun(1e-3,T_cu); end
-% 기본파 = 최소 양주파수 성분
-f_fund = min(fs(fs>0));
+% 기본파 = 진폭이 가장 큰 양주파수 성분 (위에서 구한 i0/posIdx 재사용 —
+%  "가장 낮은 유효 주파수"로 잘못 고르면 미세한 저주파 성분을 기본파로
+%  오인해 P_fund가 거의 0으로 나오는 버그가 있었음)
+f_fund = f(posIdx(i0));
 mask_fund = (fs==f_fund);
 mask_dc   = (fs==0);
 mask_harm = ~mask_fund & ~mask_dc & (fs>0);
