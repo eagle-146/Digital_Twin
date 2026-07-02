@@ -47,7 +47,7 @@ if ~isempty(ls) && isa(ls,'Simulink.SimulationData.Dataset')
     for c = 1:numel(names)
         idx = find(contains(lower(elemNames), lower(names{c})), 1);
         if ~isempty(idx)
-            sig = ls{idx}.Values;
+            sig = local_get_values(ls{idx});
             [iabc, t] = local_to_matrix(sig);
             if size(iabc,2) >= 3
                 iabc = iabc(:,1:3); return
@@ -63,7 +63,7 @@ if ~isempty(ls) && isa(ls,'Simulink.SimulationData.Dataset')
             idx = find(strcmpi(elemNames, trip{ph}{c}) | ...
                        contains(lower(elemNames), lower(trip{ph}{c})), 1);
             if ~isempty(idx)
-                [v, tt] = local_to_matrix(ls{idx}.Values);
+                [v, tt] = local_to_matrix(local_get_values(ls{idx}));
                 cols{ph} = v(:,1); break
             end
         end
@@ -77,6 +77,18 @@ error(['상전류 신호를 찾지 못했습니다. 모델에서 3상 고정자 
        'To Workspace)하고, 신호명을 i_abc 또는 ia/ib/ic 로 지정하거나 ', ...
        'get_phase_current(simOut, {''your_signal_name''}) 처럼 명시하세요.']);
 
+end
+
+% ── Dataset 원소 → 실제 신호값 추출 (Simulink.SimulationData.Signal로
+%    감싸져 있으면 .Values, 아니면(순수 timeseries 등) 그대로) ──
+function sig = local_get_values(el)
+if isobject(el) && isprop(el,'Values')
+    sig = el.Values;
+elseif isstruct(el) && isfield(el,'Values')
+    sig = el.Values;
+else
+    sig = el;
+end
 end
 
 % ── timeseries/구조체 → 행렬 변환 ──

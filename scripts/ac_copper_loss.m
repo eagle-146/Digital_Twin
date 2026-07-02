@@ -55,6 +55,21 @@ end
 i_phase = i_phase(:);
 t = t(:);
 
+if numel(t) < 4 || numel(t) ~= numel(i_phase)
+    error('ac_copper_loss:badInput', ...
+        'i_phase/t 샘플 수가 너무 적거나(<4) 서로 길이가 다릅니다 (t: %d, i_phase: %d).', ...
+        numel(t), numel(i_phase));
+end
+
+% 가변스텝 솔버는 zero-crossing 등 이벤트 경계에서 같은 시각이 중복 기록될
+% 수 있다 — interp1은 엄격히 단조증가하는 t를 요구하므로 중복시각은 마지막
+% 값을 남기고 정리한다.
+[t, uidx] = unique(t, 'last');
+i_phase = i_phase(uidx);
+if numel(t) < 4
+    error('ac_copper_loss:badInput', '중복시각 제거 후 샘플이 4개 미만입니다.');
+end
+
 % ── 균일 시간격자로 재보간 (가변스텝 솔버 대응) ──
 %  Simulink 가변스텝 솔버(VariableStepAuto 등)로 로깅된 신호는 샘플 간격이
 %  불균일하다. FFT는 균일 샘플링을 전제하므로, 재보간 없이 그대로 fft()에
@@ -73,12 +88,18 @@ t = t_u;
 N  = numel(i_phase);
 Fs = 1/dt;
 
-% ── FFT → 단측 진폭 스펙트럼 ──
-Y  = fft(i_phase);
+% ── FFT → 단측 진폭 스펙트럼 (Hann 윈도우로 스펙트럼 누설 억제) ──
+%  윈도우 없이(사각창) FFT하면 신호 길이가 정수 주기에 정확히 맞아떨어지지
+%  않는 한 각 톤의 에너지가 주변 빈으로 넓게 번져(spectral leakage), 실제로는
+%  존재하지 않는 수많은 미세 "고조파"가 잡힌다. Hann 윈도우를 곱해 누설을
+%  크게 줄이고, 진폭보정계수(ACF=1/mean(w))로 감쇠분을 보정한다.
+w   = 0.5*(1 - cos(2*pi*(0:N-1)'/N));   % Hann(주기형), Signal Processing Toolbox 없이 직접 계산
+acf = 1/mean(w);
+Y   = fft(i_phase .* w);
 f  = (0:N-1)'*(Fs/N);
 half = 1:floor(N/2)+1;
 f  = f(half);
-amp = abs(Y(half))/N;
+amp = abs(Y(half))/N * acf;
 amp(2:end-1) = 2*amp(2:end-1);        % 단측 보정 (DC·Nyquist 제외)
 
 if isempty(opt.fMax), opt.fMax = Fs/2; end
@@ -89,11 +110,29 @@ f = f(keep); amp = amp(keep);
 Irms = amp/sqrt(2);
 Irms(f==0) = amp(f==0);
 
-% 유효 고조파만 (기본파 대비 임계 이상)
-[~, i0] = max(amp(f>0));            % 기본파 인덱스(양의 주파수 중 최대)
-posIdx = find(f>0);
-fund_amp = amp(posIdx(i0));
-sig = amp >= opt.ampThresh*fund_amp;
+% 유효 고조파만: 국소 최댓값(local maxima)만 채택.
+%  Hann 윈도우는 각 톤의 진폭을 중심 빈에서 정확히 복원하도록 ACF로
+%  보정되어 있는데, 그 바로 옆(좌우 1~2빈)에도 같은 톤의 에너지가 소량
+%  새어나간다(윈도우 자체의 스펙트럼 모양 때문 — DC조차 예외 아님). 그 누설
+%  빈까지 "별도 고조파"로 합산하면 이미 ACF로 복원된 톤의 에너지를
+%  이중으로 세게 된다. 국소최댓값만 남기면 실제 톤 하나당 정확히 한 빈만
+%  채택되어 이중계산을 피한다.
+isPeak = false(size(amp));
+if numel(amp) > 2
+    isPeak(2:end-1) = amp(2:end-1) > amp(1:end-2) & amp(2:end-1) > amp(3:end);
+end
+isPeak(1) = true;                              % DC는 항상 자기 자신이 대표
+if numel(amp) > 1
+    isPeak(end) = amp(end) > amp(end-1);        % Nyquist 경계
+end
+
+posPeakIdx = find(f>0 & isPeak);
+if isempty(posPeakIdx)
+    posPeakIdx = find(f>0);                     % 극단적으로 짧은 신호 등 예외 폴백
+end
+[~, i0] = max(amp(posPeakIdx));
+fund_amp = amp(posPeakIdx(i0));
+sig = isPeak & (amp >= opt.ampThresh*fund_amp);
 sig(f==0) = true;                    % DC 항상 포함
 
 fs   = f(sig);
@@ -111,10 +150,12 @@ harm = table(fs, Irms, Rac, opt.nPhase*Pk, 'VariableNames', ...
 harm = sortrows(harm,'f_Hz');
 
 Rdc = RacFun(0, T_cu); if Rdc==0, Rdc = RacFun(1e-3,T_cu); end
-% 기본파 = 진폭이 가장 큰 양주파수 성분 (위에서 구한 i0/posIdx 재사용 —
+% 기본파 = 진폭이 가장 큰 양주파수 피크 (위에서 구한 i0/posPeakIdx 재사용 —
 %  "가장 낮은 유효 주파수"로 잘못 고르면 미세한 저주파 성분을 기본파로
-%  오인해 P_fund가 거의 0으로 나오는 버그가 있었음)
-f_fund = f(posIdx(i0));
+%  오인해 P_fund가 거의 0으로 나오는 버그가 있었음). sig가 이미 국소최댓값만
+%  담고 있으므로 정확히 그 빈 하나만 기본파로 매칭하면 된다(이웃 누설빈은
+%  애초에 sig에서 제외됨).
+f_fund = f(posPeakIdx(i0));
 mask_fund = (fs==f_fund);
 mask_dc   = (fs==0);
 mask_harm = ~mask_fund & ~mask_dc & (fs>0);

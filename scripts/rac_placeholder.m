@@ -18,10 +18,14 @@
 function out = rac_placeholder(f, T, Rdc20, T_ref, alpha_cu, k, f_ref)
 
 if nargin == 0
-    % 인자 없이 호출 → 대표 기본값으로 함수핸들 반환
-    Rdc20d = 12e-3;   % 12 mOhm (헤어핀 상저항 대략치, 설계 확정 시 교체)
-    T_refd = 20; alphad = 3.93e-3;
-    kd = 0.6; f_refd = 1000;   % 1kHz에서 Rac/Rdc ~1.6 수준(예시)
+    % 인자 없이 호출 → params()의 모터 저항값으로 함수핸들 반환.
+    %  (이전에는 12mOhm을 여기 따로 하드코딩해서 params.m의 mot.Rdc_20=10mOhm과
+    %   조용히 어긋나 있었다 — params()를 단일 소스로 삼아 재사용한다.)
+    p = params();
+    Rdc20d = p.mot.Rdc_20;
+    T_refd = p.mot.T_ref;
+    alphad = p.mot.alpha_cu;
+    kd = 0.6; f_refd = 1000;   % 표피/근접 상승 계수 — FEA맵 확보 전 형태확인용 고정치(모터 스펙 아님)
     out = @(ff,TT) rac_placeholder(ff, TT, Rdc20d, T_refd, alphad, kd, f_refd);
     return
 end
