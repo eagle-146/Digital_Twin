@@ -40,7 +40,7 @@ end
 
 % ── 1) 3상 묶음 신호 먼저 탐색 ──
 if ~isempty(ls) && isa(ls,'Simulink.SimulationData.Dataset')
-    elemNames = cellfun(@(e)e.Name, num2cell(1:ls.numElements), 'uni', 0);
+    elemNames = cell(1, ls.numElements);
     for n = 1:ls.numElements
         elemNames{n} = ls{n}.Name;
     end
