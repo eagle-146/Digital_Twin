@@ -17,10 +17,19 @@ if nargin < 2 || isempty(names)
              'phase_current','iphase','i_stator'};
 end
 
-% ── logsout 취득 ──
+% ── logsout 취득 (기본 이름 'logsout'이 없으면 'logsout_*' 자동탐색 —
+%    모델의 SignalLoggingName이 기본값이 아닌 경우 대응) ──
 ls = [];
 if isa(simOut,'Simulink.SimulationOutput')
     try, ls = simOut.logsout; catch, end
+    if isempty(ls)
+        try
+            avail = simOut.who;
+            idx = find(strncmpi(avail,'logsout',7), 1);
+            if ~isempty(idx), ls = simOut.get(avail{idx}); end
+        catch
+        end
+    end
     if isempty(ls) || (isa(ls,'Simulink.SimulationData.Dataset') && ls.numElements==0)
         % yout(신호로깅) 대안
         try, ls = simOut.yout; catch, end

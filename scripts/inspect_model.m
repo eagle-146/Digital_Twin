@@ -45,7 +45,7 @@ lines = find_system(modelName,'FindAll','on','LookUnderMasks','all','type','line
 nlog = 0;
 for i = 1:numel(lines)
     dl = ''; try, dl = get_param(lines(i),'DataLogging'); catch, end
-    if strcmp(dl,'on')
+    if strcmpi(dl,'on') || isequal(dl,1) || isequal(dl,true)
         nm = ''; try, nm = get_param(lines(i),'Name'); catch, end
         if isempty(nm)
             try, nm = get_param(lines(i),'DataLoggingNameMode'); catch, end
