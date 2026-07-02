@@ -32,12 +32,23 @@ i_phase = squeeze(i_phase);
 if ~isvector(i_phase)
     % [N x m] 다상: 각 상 개별 처리 후 합, nPhase는 1로 (이미 실제 상수만큼 열이 있음)
     P_ac = 0; harmAll = [];
+    acc = struct('P_dc_W',0,'P_fund_W',0,'P_harm_W',0);
     for c = 1:size(i_phase,2)
         [Pc, ic] = ac_copper_loss(i_phase(:,c), t, RacFun, T_cu, ...
             'nPhase',1,'fMax',opt.fMax,'ampThresh',opt.ampThresh);
         P_ac = P_ac + Pc; harmAll = [harmAll; ic.harmonics]; %#ok<AGROW>
+        acc.P_dc_W   = acc.P_dc_W   + ic.P_dc_W;
+        acc.P_fund_W = acc.P_fund_W + ic.P_fund_W;
+        acc.P_harm_W = acc.P_harm_W + ic.P_harm_W;
+        lastInfo = ic;   % 마지막 상의 스칼라 지표(Rac/Rdc 등)는 상 공통이므로 대표로 사용
     end
-    info.harmonics = harmAll; info.note = 'multi-phase summed';
+    info = lastInfo;               % Rac_Rdc_fund, f_fund, Rdc 등 상 공통 지표 승계
+    info.harmonics = harmAll;
+    info.P_total_W = P_ac;
+    info.P_dc_W    = acc.P_dc_W;
+    info.P_fund_W  = acc.P_fund_W;
+    info.P_harm_W  = acc.P_harm_W;
+    info.note      = 'multi-phase summed';
     return
 end
 
