@@ -1,0 +1,77 @@
+%% params.m ─ Digital Twin EV AC 동손 시뮬레이션 파라미터 정의
+%  모든 파라미터를 구조체로 정의하고 params 구조체 하나로 묶어 반환/저장한다.
+%  단위는 SI 기본. 다른 스크립트에서 run('scripts/params.m') 또는 params() 형태로 사용.
+%
+%  사용 예:
+%    p = params();            % 구조체 반환
+%    p.veh.mass               % 차량 시험질량 [kg]
+%
+%  기준 스펙 출처: README.md (승용 EV 800V, 헤어핀 IPMSM)
+
+function p = params()
+
+%% ── 차량 (Vehicle) : 중형 800V EV 기준 ──────────────────────────
+veh.mass      = 2100;      % 시험질량(운전자·부하 포함) [kg]
+veh.Cd        = 0.28;      % 공기저항계수 [-]
+veh.Af        = 2.3;       % 전면투영면적 [m^2]
+veh.Crr       = 0.010;     % 구름저항계수 [-]
+veh.r_tire    = 0.335;     % 타이어 동하중반경 [m]
+veh.gear      = 10.65;     % 단단 감속비 [-]
+veh.eta_dl    = 0.97;      % 구동계 효율 [-]
+veh.rho_air   = 1.20;      % 공기밀도 [kg/m^3]
+veh.g         = 9.81;      % 중력가속도 [m/s^2]
+
+%% ── 모터 (IPMSM, 헤어핀 권선) ────────────────────────────────────
+mot.type      = 'IPMSM';
+mot.pole_pairs= 4;         % 극쌍수 (8극)
+mot.slots     = 48;        % 슬롯수
+mot.winding   = 'hairpin'; % 권선 방식
+mot.P_peak    = 160e3;     % 최대 출력 [W]
+mot.P_cont    = 70e3;      % 연속 출력 [W]
+mot.T_peak    = 350;       % 최대 토크 [N·m]
+mot.n_max     = 16000;     % 최고 회전수 [rpm]
+mot.n_base    = 5000;      % 기저속도 [rpm]
+% AC 동손 계산에 쓰이는 값 (설계·FEA 확정 시 갱신)
+mot.Rdc_20    = NaN;       % 상저항 DC @20℃ [Ohm]  (FEA/설계값으로 채움)
+mot.T_ref     = 20;        % Rdc 기준온도 [℃]
+mot.alpha_cu  = 3.93e-3;   % 구리 온도계수 [1/℃]
+
+%% ── 인버터 (스위칭 레벨 PWM) ─────────────────────────────────────
+inv.Vdc       = 800;       % DC 링크 전압 [V]  (배터리와 연동)
+inv.f_sw      = 20e3;      % 스위칭 주파수 [Hz]  (16~20k, 기본 20k)
+inv.modulation= 'SVPWM';   % 변조 방식
+inv.deadtime  = 0.5e-6;    % 데드타임 [s]
+inv.device    = 'SiC';     % 스위칭 소자
+
+%% ── 배터리 (DC 링크) ─────────────────────────────────────────────
+batt.V_nom    = 800;       % 공칭 전압 [V]
+batt.model    = 'ideal';   % 'ideal'(정전압원) | 'equivalent'(등가회로)
+batt.R_int    = 0.05;      % 내부저항 [Ohm] (equivalent일 때)
+
+%% ── 제어 (FOC) ──────────────────────────────────────────────────
+ctrl.scheme   = 'FOC';     % 벡터제어
+ctrl.strategy = 'MTPA+FW'; % 최대토크/전류 + 약자속
+ctrl.f_ctrl   = inv.f_sw;  % 전류제어 샘플링 (스위칭과 동기 가정)
+ctrl.Ts_ctrl  = 1/ctrl.f_ctrl;
+
+%% ── 주행 시나리오 (고속 정속) ────────────────────────────────────
+scen.type     = 'constant_speed';
+scen.speeds_kmh = [100 120 140];  % 정속 운전점 [km/h]
+scen.settle_s = 2.0;       % 정상상태 도달 대기 [s]
+scen.fft_periods = 10;     % AC손 산출용 FFT 창 (기본 전기주기 수)
+
+%% ── 솔버 / 시뮬레이션 설정 ───────────────────────────────────────
+sim_cfg.solver   = 'ode23tb';   % 시스템단(평균화)용, 강성
+sim_cfg.dt_sw    = 5e-7;        % 스위칭단 고정스텝 [s] (0.5us, 20kHz 기준 주기당 100점)
+sim_cfg.solver_sw= 'FixedStepAuto';
+
+%% ── 묶어서 반환 ─────────────────────────────────────────────────
+p.veh  = veh;
+p.mot  = mot;
+p.inv  = inv;
+p.batt = batt;
+p.ctrl = ctrl;
+p.scen = scen;
+p.sim  = sim_cfg;
+
+end
