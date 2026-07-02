@@ -9,6 +9,9 @@
 %  ── 모델에 맞춰 조정할 지점(cfg) ─────────────────────────────
 %    cfg.speedVar   : 모델이 속도지령으로 참조하는 워크스페이스 변수명 (기본 'Speed_Ref')
 %    cfg.speedUnit  : 'rpm' | 'rad/s'  (기본 'rpm')
+%    cfg.applySpeed : @(simIn,spd_rpm) ... 속도지령 주입 함수핸들(옵션).
+%                     지정 시 speedVar/setVariable 대신 이걸로 속도를 주입
+%                     (예: 워크스페이스 변수가 아니라 Step 블록 파라미터로 지령하는 모델)
 %    cfg.stopTime   : 각 실행 시뮬 시간 [s] (기본: 정상상태 도달 + FFT창)
 %    cfg.currentSig : 상전류 신호명 후보 (기본: get_phase_current 기본목록)
 %    cfg.applyParams: @(simIn,p) ... 모터 dq 파라미터를 모델에 주입하는 함수핸들(옵션)
@@ -20,6 +23,7 @@ function results = run_ac_loss_sweep(modelName, cfg)
 if nargin < 2, cfg = struct(); end
 if ~isfield(cfg,'speedVar'),   cfg.speedVar   = 'Speed_Ref'; end
 if ~isfield(cfg,'speedUnit'),  cfg.speedUnit  = 'rpm';       end
+if ~isfield(cfg,'applySpeed'), cfg.applySpeed = [];          end
 if ~isfield(cfg,'currentSig'), cfg.currentSig = {};          end
 if ~isfield(cfg,'T_cu'),       cfg.T_cu       = 100;         end
 if ~isfield(cfg,'RacFun'),     cfg.RacFun     = rac_placeholder(); end
@@ -48,7 +52,11 @@ for k = 1:n
     end
 
     simIn = Simulink.SimulationInput(modelName);
-    simIn = simIn.setVariable(cfg.speedVar, spd);
+    if ~isempty(cfg.applySpeed)
+        simIn = cfg.applySpeed(simIn, spd);
+    else
+        simIn = simIn.setVariable(cfg.speedVar, spd);
+    end
     simIn = simIn.setModelParameter('StopTime', num2str(cfg.stopTime));
     % 신호 로깅 보장
     simIn = simIn.setModelParameter('SignalLogging','on');
