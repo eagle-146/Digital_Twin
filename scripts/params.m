@@ -31,8 +31,20 @@ mot.P_cont    = 70e3;      % 연속 출력 [W]
 mot.T_peak    = 350;       % 최대 토크 [N·m]
 mot.n_max     = 16000;     % 최고 회전수 [rpm]
 mot.n_base    = 5000;      % 기저속도 [rpm]
+
+% ── dq 전기 파라미터 (PMSM 모델용) ──
+%  ⚠ 엔지니어링 추정치 — 스펙(160kW/800V/350Nm/16000rpm)에 정합하도록 도출.
+%    FEA/설계 확정 시 반드시 교체. 약자속 성립 조건 Ich=λpm/Ld ≈ Imax 근처로 맞춤.
+mot.Rs        = 10e-3;     % 상저항 (DC) [Ohm]
+mot.Ld        = 0.35e-3;   % d축 인덕턴스 [H]
+mot.Lq        = 0.60e-3;   % q축 인덕턴스 [H] (IPM: Lq>Ld, 돌극비 ~1.7)
+mot.lambda_pm = 0.13;      % 영구자석 쇄교자속 [Wb]
+mot.Imax_pk   = 400;       % 최대 상전류 피크 [A]
+mot.J         = 0.04;      % 회전자 관성 [kg·m^2]
+mot.B_visc    = 1e-3;      % 점성마찰 [N·m·s]
+
 % AC 동손 계산에 쓰이는 값 (설계·FEA 확정 시 갱신)
-mot.Rdc_20    = NaN;       % 상저항 DC @20℃ [Ohm]  (FEA/설계값으로 채움)
+mot.Rdc_20    = 10e-3;     % 상저항 DC @20℃ [Ohm]  (= Rs, FEA값으로 교체)
 mot.T_ref     = 20;        % Rdc 기준온도 [℃]
 mot.alpha_cu  = 3.93e-3;   % 구리 온도계수 [1/℃]
 
