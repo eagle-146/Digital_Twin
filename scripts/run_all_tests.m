@@ -7,7 +7,8 @@
 function run_all_tests()
 
 tests = {'test_ac_copper_loss', 'test_operating_points', ...
-         'test_pmsm_current_ref', 'test_rac_dowell'};
+         'test_pmsm_current_ref', 'test_rac_dowell', ...
+         'test_compare_winding_variants'};
 
 failed = {};
 for i = 1:numel(tests)
