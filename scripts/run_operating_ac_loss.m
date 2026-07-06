@@ -4,18 +4,19 @@
 %      P_dc = 3·Rdc(T)·I_rms²           (DC 동손)
 %      P_ac = 3·Rac(fe,T)·I_rms²        (AC저항 반영 총 동손)
 %      ΔP_ac = P_ac − P_dc              (AC효과 추가분)
-%  ※ Rac는 현재 rac_placeholder(임시). 팀 FEA의 Rac(f,T) 맵이 오면 교체하면
-%    같은 스크립트로 실제 값이 나온다.
+%  ※ Rac는 현재 rac_dowell(물리모델, params 권선형상 기반). 팀 FEA의 Rac(f,T)
+%    맵이 오면 RacFun만 맵 보간으로 바꾸면 같은 스크립트로 실제 값이 나온다.
 %
-%  사용:  T = run_operating_ac_loss;        % 구리온도 100℃ 기본
-%         T = run_operating_ac_loss(120);   % 구리온도 지정 [℃]
+%  사용:  T = run_operating_ac_loss;              % 100℃, Dowell 기본
+%         T = run_operating_ac_loss(120);         % 구리온도 지정 [℃]
+%         T = run_operating_ac_loss(100, RacFun); % Rac 모델/맵 직접 지정(비교용)
 
-function Tout = run_operating_ac_loss(T_cu)
+function Tout = run_operating_ac_loss(T_cu, RacFun)
 
-if nargin < 1, T_cu = 100; end
+if nargin < 1 || isempty(T_cu),   T_cu = 100;             end
+if nargin < 2 || isempty(RacFun), RacFun = rac_dowell();  end   % ← FEA 맵으로 교체 지점
 p  = params();
 op = operating_points(p);
-RacFun = rac_placeholder();          % ← FEA 맵으로 교체 지점
 Rdc = RacFun(0, T_cu);
 
 n = numel(op);
@@ -47,9 +48,11 @@ if ~exist('results','dir'), mkdir('results'); end
 writetable(Tout, fullfile('results','operating_ac_loss.csv'));
 
 % 출력
-fprintf('\n=== 운전점별 AC 동손 (구리온도 %d℃, Rac=placeholder) ===\n', T_cu);
+fprintf('\n=== 운전점별 AC 동손 (구리온도 %d℃, Rac=Dowell 물리모델) ===\n', T_cu);
 disp(Tout);
-fprintf('※ Rac는 임시값 — 팀 FEA의 Rac(f,T) 맵으로 교체 시 실제 수치가 됨.\n\n');
+fprintf('※ Rac는 Dowell 해석식(도체높이 %.1fmm, %d층 기준). params.mot.cond_h/n_layers를\n', ...
+        p.mot.cond_h*1e3, p.mot.n_layers);
+fprintf('  바꿔 재실행하면 설계변주 효과를 볼 수 있음. FEA 맵 확보 시 교체.\n\n');
 
 % 플롯: DC동손 + AC추가분 (스택), 속도별
 figure('Name','운전점별 AC 동손');
