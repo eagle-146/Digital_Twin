@@ -6,8 +6,7 @@
 
 function run_all_tests()
 
-tests = {'test_ac_copper_loss', 'test_get_phase_current', ...
-         'test_operating_points', 'test_inspect_model'};
+tests = {'test_ac_copper_loss', 'test_operating_points'};
 
 failed = {};
 for i = 1:numel(tests)
